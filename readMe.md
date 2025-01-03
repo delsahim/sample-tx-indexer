@@ -1,21 +1,77 @@
-# SAMPLE INDEXER REPO
+# Solana Transaction Indexer
 
-## HOW THE INDEXER WORKS 
-The Indexer works by using a websocket connection to receive block notifications for solana transactions that interact with the selected programs 
-### KEY POINTS
-1. For dex transactions there are two places where the required data can be found 
-    - For direct interactions; the data is in the instruction array and can be identified by the programId field of any instruction 
-    - For transactions initiated by dex aggregators; the instructions are found in the innerInstructions array
+A high-performance indexer for tracking and decoding Solana DEX transactions.
 
-2. Decoding A swap transaction; Generally when a swap occurs, there are two calls to the token program "transfer" instruction (TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA)
-    - The user sends the token to be swapped into the pool acct
-    - The pool acct sends the equivalent into the user other token acct
+## Overview
+This indexer monitors Solana blockchain transactions in real-time, specifically focusing on decentralized exchange (DEX) interactions. It utilizes WebSocket connections to receive block notifications and processes transactions that interact with specified programs.
 
-3. Decoding Instruction; all instruction data are base58 encoded, and you have to first decode them, the instruction generally consists of discriminator and args;
-    - the discriminator acts as a pointer to the instruction called in the program 
-    - the remaining data is decoded using the idl
+## Architecture
 
-### HELPER FUNCTIONS
-1. GetTransferAmount: Decodes a tokent program transfer data and reurns the amount 
-2. Decodes a transfer: instruction and returns the UIAmount and Token Mint
-3. DecodeOrcaSwapData:: Decodes an orca instruction data
+### WebSocket Connection
+- Maintains a real-time connection to Solana network
+- Receives block notifications for targeted program interactions
+- Ensures minimal latency for transaction processing
+
+### Transaction Processing
+
+#### DEX Transaction Sources
+1. **Direct Interactions**
+   - Located in the main instruction array
+   - Identified by the `programId` field in instructions
+   - Direct user interactions with DEX programs
+
+2. **Aggregator-Initiated Transactions**
+   - Found in the `innerInstructions` array
+   - Typically complex transactions routed through DEX aggregators
+   - May contain multiple nested swaps
+
+### Swap Transaction Decoding
+
+#### Token Program Transfers
+Each swap transaction typically involves two token program transfers (`TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`):
+1. User → Pool Account: Initial token transfer
+2. Pool Account → User: Received token transfer
+
+#### Instruction Decoding Process
+1. **Base58 Decoding**
+   - All instruction data is base58 encoded
+   - Must be decoded before processing
+
+2. **Data Structure**
+   - Instruction discriminator: Identifies the specific program instruction
+   - Arguments: Transaction-specific parameters defined in the IDL
+
+## Helper Functions
+
+### Transfer Processing
+1. `GetTransferAmount`
+   - Decodes token program transfer data
+   - Returns raw transfer amount
+   - Input: Base58 encoded instruction data
+   - Output: Transfer amount (uint64)
+
+2. `DecodeTransfer`
+   - Comprehensive transfer instruction decoder
+   - Returns both UI amount and token mint address
+   - Handles decimal precision conversion
+   - Input: Transfer instruction
+   - Output: `{uiAmount: float64, tokenMint: string}`
+
+### DEX-Specific Functions
+1. `DecodeOrcaSwapData`
+   - Specialized decoder for Orca DEX instructions
+   - Extracts swap-specific parameters
+   - Input: Orca instruction data
+   - Output: Decoded swap parameters
+
+## Setup and Usage
+
+[Add setup instructions, configuration details, and usage examples here]
+
+## Contributing
+
+[Add contribution guidelines here]
+
+## License
+
+[Add license information here]
