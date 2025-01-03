@@ -1,13 +1,14 @@
 package utils
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 
 	"github.com/mr-tron/base58"
 )
 
-func GetInstructionDiscriminator(instructionData string) (string, error){
+func GetEightByteDiscriminator(instructionData string) (string, error){
 	decodedData, err := base58.Decode(instructionData)
     if err != nil {
         return "", err
@@ -37,4 +38,11 @@ func GetOneByteDiscriminator(instructionData string) (string, error) {
     // Get first byte and convert to hex
     discriminator := hex.EncodeToString(decodedData[:1])
     return discriminator, nil
+}
+
+func GetAnchorDiscriminatorFromInstructionName(instructionName string) (string) {
+    preImage := fmt.Sprintf("%s:%s","global",instructionName)
+    hash := sha256.Sum256([]byte(preImage))
+    return hex.EncodeToString(hash[:8])
+
 }

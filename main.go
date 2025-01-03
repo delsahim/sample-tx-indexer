@@ -23,6 +23,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
+
 	const (
 		NODE_WSS_URL = "wss://solemn-fluent-glitter.solana-mainnet.quiknode.pro/a4b0c2d7fa048c4818a5f20dd20018d16ebdc4d3"
 		ALL_NODE_WSS = "wss://solana-rpc.publicnode.com"
@@ -104,6 +105,7 @@ func main() {
 				transactionSignature := singleTransaction.Transaction.Signatures
 				completeAccountKeys := append(singleTransaction.Transaction.Message.AccountKeys,singleTransaction.Meta.LoadedAddresses.Writable...)
 				completeAccountKeys = append(completeAccountKeys, singleTransaction.Meta.LoadedAddresses.Readonly...)
+				// check the main instructions
 				for _,accountKey := range singleTransaction.Transaction.Message.AccountKeys {
 					if accountKey == ORCA_PROGRAM_ID {
 						// find the instruction needed
@@ -114,20 +116,26 @@ func main() {
 								// verify if it is a swap instruction
 								// indexValue := instructionIndex
 								// tokenAuth := completeAccountKeys[instruction.Accounts[1]]
-								disc, err := utils.GetInstructionDiscriminator(instruction.Data)
+								disc, err := utils.GetEightByteDiscriminator(instruction.Data)
 								if err != nil {
 									log.Println("Unable to get discriminator")
 									continue
 								}
-								if disc == "f8c69e91e17587c8" {
+								if disc == utils.GetAnchorDiscriminatorFromInstructionName("swap") {
 									log.Println("Swap Found")
-									log.Println("Inner transaction programs")
+									swapArgs, err := handlers.DecodeOrcaSwapData(instruction.Data)
+									if err != nil {
+										log.Println("error in retrieving data")
+										
+									}
+									log.Printf("swap data args: %v",swapArgs)
 									//get the tokenA and tokenb account
 									userTokenAccountA :=instruction.Accounts[3]
 									userTokenAccountB := instruction.Accounts[5]
 									liquidityTokenVaultA := instruction.Accounts[4]
 									liquidityTokenVaultB := instruction.Accounts[6]
 									userWallet := completeAccountKeys[instruction.Accounts[1]]
+									pairPoolAccount := completeAccountKeys[instruction.Accounts[2]]
 									// create the swap variables
 									var (
 										tokenMintA string
@@ -164,12 +172,135 @@ func main() {
 									userTokenChangeA := math.Abs(userPostBalanceA - userPreBalanceA)
 									userTokenChangeB := math.Abs(userPostBalanceB - userPreBalanceB)
 									log.Printf("Transaction Hash %v \n",transactionSignature)
-									log.Printf("A to b %v",aToB)
+									log.Printf("A to b %v\n",aToB)
+									log.Printf("Pair Pool: %s\n", pairPoolAccount)
 									log.Printf("User {%s}, swapped {%v} of token A {%s} for {%v} of token B {%s} \n",userWallet, userTokenChangeA, tokenMintA, userTokenChangeB, tokenMintB)
 									log.Printf("Liquidity pool for token A; PreBalance {%v}  PostBalance {%v}",lpPreBalanceA,lpPostBalanceA)
 									log.Printf("Liquidity pool for token B; PreBalance {%v}  PostBalance {%v}",lpPreBalanceB,lpPostBalanceB)									
+								} else if (disc == utils.GetAnchorDiscriminatorFromInstructionName("initializePool")) {
+									log.Println("initializing a new pool")
+								} else if (disc == utils.GetAnchorDiscriminatorFromInstructionName("collectProtocolFees")) {
+									log.Println("decrese liquidity found")
+								} else {
+									log.Println("unidentified instruction")
 								}
 							}
+						}
+					}
+				}
+
+				// check the inner instructions
+				
+				for innerInstructionRange, innerInstruction := range singleTransaction.Meta.InnerInstructions {
+					for range2, instruction := range innerInstruction.Instructions {
+						// check for the orca program in the instruction id
+						if completeAccountKeys[instruction.ProgramIdIndex] == ORCA_PROGRAM_ID {
+
+							log.Println("Inner transaction found")
+
+							// log.Printf("Instruction Data: %v and discriminator: %v",instruction.Data,)
+							
+
+							// decode the inner transaction first to confirm that it is a right transaction
+							disc, err := utils.GetEightByteDiscriminator(instruction.Data)
+							if err != nil {
+								log.Println("Unable to get discriminator")
+								continue
+							}
+							if disc == utils.GetAnchorDiscriminatorFromInstructionName("swap") {
+								// handle the swap discriminator
+								log.Println("innner swap fpund, rinting tokenkeg details")
+								log.Printf("Transaction Hash: %v", transactionSignature)
+								tokenInstruction1 := singleTransaction.Meta.InnerInstructions[innerInstructionRange].Instructions[range2+1]
+								
+								tokenInstruction2 := singleTransaction.Meta.InnerInstructions[innerInstructionRange].Instructions[range2+2]
+								
+								tokenDecoded1, err := handlers.DecodeSystemTransfer(completeAccountKeys,tokenInstruction1,NODE_HTTP_URL)
+								if err != nil {
+									log.Println("Error in getting token details")
+								}
+								log.Printf("Decoded token: %v", tokenDecoded1)
+								tokenDecoded2, err := handlers.DecodeSystemTransfer(completeAccountKeys,tokenInstruction2,NODE_HTTP_URL)
+								if err != nil {
+									log.Println("Error in getting token details")
+								}
+								log.Printf("Decoded token: %v", tokenDecoded2)
+							}
+
+							log.Println("inner tx handled")
+
+
+
+
+							
+
+
+
+							// handle the inner insrruction
+							// log.Println("Orca inner transaction found")
+							// disc, err := utils.GetEightByteDiscriminator(instruction.Data)
+							// 	if err != nil {
+							// 		log.Println("Unable to get discriminator")
+							// 		continue
+							// 	}
+							// 	if disc == utils.GetAnchorDiscriminatorFromInstructionName("swap") {
+							// 		log.Println("Swap Found")
+							// 		log.Println("Inner transaction programs")
+							// 		//get the tokenA and tokenb account
+							// 		userTokenAccountA :=instruction.Accounts[3]
+							// 		userTokenAccountB := instruction.Accounts[5]
+							// 		liquidityTokenVaultA := instruction.Accounts[4]
+							// 		liquidityTokenVaultB := instruction.Accounts[6]
+							// 		userWallet := completeAccountKeys[instruction.Accounts[1]]
+							// 		pairPoolAccount := completeAccountKeys[instruction.Accounts[2]]
+							// 		// create the swap variables
+							// 		var (
+							// 			tokenMintA string
+							// 			tokenMintB string
+							// 			userPreBalanceA float64
+							// 			userPostBalanceA float64
+							// 			userPreBalanceB  float64
+							// 			userPostBalanceB float64
+							// 			lpPreBalanceA  float64
+							// 			lpPostBalanceA float64
+							// 			lpPreBalanceB  float64
+							// 			lpPostBalanceB float64
+							// 		)
+
+							// 		// get the pre token details 
+							// 		tokenMintA, tokenMintB, userPreBalanceA, userPreBalanceB, lpPreBalanceA, lpPreBalanceB =handlers.GetSwapTokenBalace(
+							// 									singleTransaction.Meta.PreTokenBalances,
+							// 									userTokenAccountA,
+							// 									userTokenAccountB,
+							// 									liquidityTokenVaultA,
+							// 									liquidityTokenVaultB,
+							// 								)
+
+							// 		// get the post token details 
+							// 		tokenMintA, tokenMintB, userPostBalanceA, userPostBalanceB, lpPostBalanceA, lpPostBalanceB =handlers.GetSwapTokenBalace(
+							// 			singleTransaction.Meta.PostTokenBalances,
+							// 			userTokenAccountA,
+							// 			userTokenAccountB,
+							// 			liquidityTokenVaultA,
+							// 			liquidityTokenVaultB,
+							// 		)
+							// 		aToB := handlers.GetAtoB(userPreBalanceA, userPostBalanceA)
+							// 		// determine buy and sell
+							// 		userTokenChangeA := math.Abs(userPostBalanceA - userPreBalanceA)
+							// 		userTokenChangeB := math.Abs(userPostBalanceB - userPreBalanceB)
+							// 		log.Printf("Inner Transaction Hash %v \n",transactionSignature)
+							// 		log.Printf("A to b %v\n",aToB)
+							// 		log.Printf("Pair Pool: %s\n", pairPoolAccount)
+							// 		log.Printf("User {%s}, swapped {%v} of token A {%s} for {%v} of token B {%s} \n",userWallet, userTokenChangeA, tokenMintA, userTokenChangeB, tokenMintB)
+							// 		log.Printf("Liquidity pool for token A; PreBalance {%v}  PostBalance {%v}",lpPreBalanceA,lpPostBalanceA)
+							// 		log.Printf("Liquidity pool for token B; PreBalance {%v}  PostBalance {%v}",lpPreBalanceB,lpPostBalanceB)									
+							// 	} else if (disc == utils.GetAnchorDiscriminatorFromInstructionName("initializePool")) {
+							// 		log.Println("initializing a new pool")
+							// 	} else if (disc == utils.GetAnchorDiscriminatorFromInstructionName("collectProtocolFees")) {
+							// 		log.Println("decrese liquidity found")
+							// 	} else {
+							// 		log.Println("unidentified instruction")
+							// 	}
 						}
 					}
 				}
