@@ -9,9 +9,7 @@ import (
 	websocketmethods "indexer_golang/websocket_methods"
 	"log"
 	"math"
-	"os"
-	"os/signal"
-	"syscall"
+
 	"time"
 
 	"github.com/coder/websocket/wsjson"
@@ -57,13 +55,11 @@ func main() {
 	log.Println("Subscription request sent")
 
 
-	// Channel to handle graceful shutdown
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
+
 
 
 	// deal with respnonse
-	go func() {
+	func() {
 		
 		for {
 			// notify that a new block has been received and read it 
@@ -313,6 +309,4 @@ func main() {
 
 
 	// deal with keyboard interruption
-	<-interrupt
-	log.Println("Interrupt received, shutting down .......")
 }

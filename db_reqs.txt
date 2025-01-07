@@ -1,0 +1,76 @@
+[CHAIN_NAME]_TRANSACTIONS Table Schema
+Transaction Core
+
+id BIGSERIAL PRIMARY KEY
+transaction_hash VARCHAR(100) NOT NULL (index on it)
+block_number BIGINT NOT NULL (index maybe)
+block_time TIMESTAMP NOT NULL (definiteely index on this dattime obj)
+transaction_index INTEGER 
+success BOOLEAN NOT NULL
+error_message TEXT
+
+Transaction Type & DEX Info
+
+dex_name VARCHAR(50) NOT NULL  -- e.g., 'Orca', 'Raydium' (index on it)
+program_id VARCHAR(100) NOT NULL -- Contract/Program address (index on it)
+transaction_type VARCHAR(20) NOT NULL -- 'SWAP', 'ADD_LIQUIDITY', 'REMOVE_LIQUIDITY'
+instruction_index INTEGER  -- For Solana specific
+log_index INTEGER  -- For EVM specific
+
+Token Information
+
+token_in_mint VARCHAR(100) NOT NULL
+token_out_mint VARCHAR(100) NOT NULL
+token_in_symbol VARCHAR(20)
+token_out_symbol VARCHAR(20)
+token_in_decimals INTEGER
+token_out_decimals INTEGER
+token_in_amount NUMERIC(40,0) NOT NULL -- Raw amount
+token_out_amount NUMERIC(40,0) NOT NULL -- Raw amount
+token_in_amount_usd NUMERIC(40,18) -- USD value
+token_out_amount_usd NUMERIC(40,18) -- USD value
+
+Price Information
+
+price_impact NUMERIC(40,18)
+token_in_price_usd NUMERIC(40,18)
+token_out_price_usd NUMERIC(40,18)
+fee_amount NUMERIC(40,0)
+fee_token VARCHAR(100)
+fee_usd NUMERIC(40,18)
+
+Account Information
+
+user_wallet VARCHAR(100) NOT NULL
+pool_address VARCHAR(100) NOT NULL
+token_account_in VARCHAR(100)  -- Solana specific
+token_account_out VARCHAR(100) -- Solana specific
+
+Pool State (Pre-Transaction)
+
+pool_token_0_reserve NUMERIC(40,0)
+pool_token_1_reserve NUMERIC(40,0)
+pool_token_0_mint VARCHAR(100)
+pool_token_1_mint VARCHAR(100)
+pool_token_0_symbol VARCHAR(20)
+pool_token_1_symbol VARCHAR(20)
+pool_token_0_decimals INTEGER
+pool_token_1_decimals INTEGER
+pool_token_0_price_usd NUMERIC(40,18)
+pool_token_1_price_usd NUMERIC(40,18)
+pool_liquidity_usd NUMERIC(40,18)
+pool_lp_total_supply NUMERIC(40,0)
+
+Pool State (Post-Transaction)
+
+pool_token_0_reserve_post NUMERIC(40,0)
+pool_token_1_reserve_post NUMERIC(40,0)
+pool_liquidity_usd_post NUMERIC(40,18)
+pool_lp_total_supply_post NUMERIC(40,0)
+
+Metadata
+
+created_at TIMESTAMP NOT NULL DEFAULT NOW()
+updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+indexer_node_id VARCHAR(50) -- ID of indexer node that processed this
+raw_data JSONB -- Full transaction data for reference
